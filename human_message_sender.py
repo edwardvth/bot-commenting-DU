@@ -20,8 +20,8 @@ MESSAGES = [
     "Incredible!",
 ]
 
-MIN_BETWEEN_SUBMISSIONS = 5.0
-MAX_BETWEEN_SUBMISSIONS = 10.0
+MIN_BETWEEN_SUBMISSIONS = 1.0
+MAX_BETWEEN_SUBMISSIONS = 5.0
 
 # Human-like typing speed in seconds between individual keypresses.
 MIN_KEY_DELAY = 0.035
