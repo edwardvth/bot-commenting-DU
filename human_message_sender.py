@@ -1,3 +1,4 @@
+import sys
 import time
 import random
 import threading
@@ -43,6 +44,9 @@ MAX_PRE_SEND_PAUSE = 0.9
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.05
 
+# Mac uses Command for select-all / paste; Windows and Linux use Ctrl.
+MOD_KEY = "command" if sys.platform == "darwin" else "ctrl"
+
 stop_event = threading.Event()
 
 
@@ -77,7 +81,7 @@ def human_type(text):
             pyautogui.write(char)
         else:
             pyperclip.copy(char)
-            pyautogui.hotkey("ctrl", "v")
+            pyautogui.hotkey(MOD_KEY, "v")
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
 
         if random.random() < HESITATION_CHANCE:
@@ -139,7 +143,7 @@ def main():
             pyautogui.click(textbox_pos.x, textbox_pos.y)
 
             # Clear any text that might remain from a previous submission.
-            pyautogui.hotkey("ctrl", "a")
+            pyautogui.hotkey(MOD_KEY, "a")
             pyautogui.press("backspace")
 
             # Type like a person.
