@@ -49,6 +49,68 @@ MOD_KEY = "command" if sys.platform == "darwin" else "ctrl"
 
 stop_event = threading.Event()
 
+def _mac_permissions_ok():
+    """macOS only. Esc works through a global keyboard hook, and macOS silently
+    disables that hook unless the terminal app has BOTH Accessibility and Input
+    Monitoring permission. Ask for both up front and refuse to run without them,
+    so the script never runs with a dead Esc key."""
+    if sys.platform != "darwin":
+        return True
+    ok = True
+    try:
+        try:
+            from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+            trusted = AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+        except ImportError:
+            from ApplicationServices import AXIsProcessTrusted
+            trusted = AXIsProcessTrusted()
+        if not trusted:
+            print("\n[!] macOS Accessibility permission is OFF for this terminal app.")
+            ok = False
+    except Exception as e:
+        print(f"\n[!] Could not check Accessibility permission ({e}).")
+    try:
+        import Quartz
+        if not Quartz.CGPreflightListenEventAccess():
+            Quartz.CGRequestListenEventAccess()  # pops the Input Monitoring prompt
+            if not Quartz.CGPreflightListenEventAccess():
+                print("[!] macOS Input Monitoring permission is OFF for this terminal app. "
+                      "The Esc key cannot work without it.")
+                ok = False
+    except Exception as e:
+        print(f"[!] Could not check Input Monitoring permission ({e}).")
+    if not ok:
+        print(
+            "\nFix it like this, then run the script again:\n"
+            "  1. System Settings > Privacy & Security > Accessibility: turn ON Terminal.\n"
+            "  2. System Settings > Privacy & Security > Input Monitoring: turn ON Terminal.\n"
+            "  3. QUIT Terminal completely (Cmd+Q), open it again, cd back into this folder.\n"
+        )
+    return ok
+
+
+def _stdin_stop_watcher():
+    """Second stop path that needs no permissions: click the terminal window and
+    press Enter. Started only after calibration so it does not eat those Enters."""
+    try:
+        for _ in sys.stdin:
+            print("\nEnter pressed in the terminal - stopping.")
+            stop_event.set()
+            return
+    except Exception:
+        pass
+
+
+def _start_esc_listener():
+    """Start the global Esc hook and confirm it is actually alive."""
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
+    time.sleep(0.3)
+    if not listener.is_alive():
+        print("[!] The Esc listener did not start. Use Enter in the terminal or the "
+              "top-left-corner failsafe to stop.")
+    return listener
+
 
 def on_press(key):
     """Stop the loop when Esc is pressed."""
@@ -105,10 +167,14 @@ def main():
     print(
         "\nSafety controls:\n"
         "  • Press Esc at any time to stop.\n"
+        "  • Or click this terminal window and press Enter.\n"
         "  • Move the mouse to the TOP-LEFT corner to trigger the failsafe.\n"
         "  • Keep the target browser window visible and do not move/resize it\n"
         "    after calibration.\n"
     )
+
+    if not _mac_permissions_ok():
+        return
 
     wait_for_enter(
         "Open your website in the browser and position the window exactly how "
@@ -122,16 +188,17 @@ def main():
     print(f"Text box: {textbox_pos}")
     print(f"Send button: {send_pos}")
 
+    # Arm every stop path BEFORE the countdown so Esc works from the first second.
+    listener = _start_esc_listener()
+    threading.Thread(target=_stdin_stop_watcher, daemon=True).start()
+
     print("\nStarting in 5 seconds. Click nothing after this point.")
-    print("Press Esc to stop.")
+    print("Stop with Esc, or click this terminal and press Enter, or fling the mouse to the top-left corner.")
     for i in range(5, 0, -1):
         if stop_event.is_set():
             return
         print(i)
         time.sleep(1)
-
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
 
     sent_count = 0
 

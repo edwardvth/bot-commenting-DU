@@ -14,6 +14,7 @@ Two scripts are included:
 ## How to stop it (read this first)
 
 - Press the **Esc** key at any time.
+- Or click the terminal window and press **Enter**. This works even if Esc does not.
 - Or fling your mouse into the **top-left corner** of the screen. That triggers a built-in emergency stop.
 
 ---
@@ -105,12 +106,13 @@ Wait until you see `Successfully installed ...`. It can take a minute. Warnings 
 
 ## Step 4 - Mac only: allow Terminal to control the mouse and keyboard
 
-macOS blocks programs from clicking and typing until you give permission. Without this, the script will run but nothing on screen will happen, and Esc may not stop it.
+macOS blocks programs from clicking and typing until you give permission. The script checks for both permissions when it starts. If either is missing it pops up the macOS permission dialog, prints exactly what to turn on, and exits instead of running with a dead Esc key.
 
 1. Open **System Settings** (Apple menu, top left).
 2. Go to **Privacy & Security**, then **Accessibility**. Turn the switch **on** for **Terminal**. If Terminal is not in the list, click the **+** button, go to Applications, then Utilities, and pick Terminal.
 3. Still in Privacy & Security, go to **Input Monitoring**. Turn the switch **on** for **Terminal**.
-4. **Quit Terminal completely** (Command + Q) and open it again, then `cd` back into the folder:
+4. If a macOS dialog appeared asking to allow Terminal, click **Open System Settings** and turn it on there.
+5. **Quit Terminal completely** (Command + Q) and open it again, then `cd` back into the folder:
 
    ```
    cd ~/Downloads/bot-commenting-DU-main
@@ -185,8 +187,11 @@ Use the longer form shown in Step 3: `py -m pip ...` on Windows, `python3 -m pip
 **"No module named pyautogui" (or pynput, or pyperclip)**
 The packages were installed into a different copy of Python than the one running the script. Run the Step 3 install command again, using exactly the same first word you use to run the script (`py` on Windows, `python3` on Mac).
 
-**On Mac the script runs but nothing gets clicked or typed, or Esc does not stop it**
-Step 4 was skipped or Terminal was not restarted afterwards. Turn on both Accessibility and Input Monitoring for Terminal, quit Terminal with Command + Q, open it again.
+**On Mac, Esc does not stop it**
+Esc uses a system-wide keyboard hook that macOS only allows when Terminal has **Input Monitoring** turned on (Accessibility alone is not enough). Turn it on in System Settings, then Privacy & Security, then Input Monitoring, quit Terminal with Command + Q and open it again. The script now checks this at startup and tells you if it is off. In the meantime, click the terminal window and press Enter, which always works.
+
+**On Mac the script runs but nothing gets clicked or typed**
+Accessibility is off for Terminal. Turn it on under Privacy & Security, then Accessibility, quit Terminal with Command + Q, open it again.
 
 **It clicks the wrong spot**
 The browser window moved or changed size after calibration. Stop it, put the browser back, run the script again and recalibrate. On Windows, if clicks are consistently off, set display scaling to 100% in Settings, then System, then Display.

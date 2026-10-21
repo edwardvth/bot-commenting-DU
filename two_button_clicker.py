@@ -1,3 +1,4 @@
+import sys
 import time
 import threading
 import pyautogui
@@ -10,6 +11,68 @@ pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.05
 
 stop_event = threading.Event()
+
+def _mac_permissions_ok():
+    """macOS only. Esc works through a global keyboard hook, and macOS silently
+    disables that hook unless the terminal app has BOTH Accessibility and Input
+    Monitoring permission. Ask for both up front and refuse to run without them,
+    so the script never runs with a dead Esc key."""
+    if sys.platform != "darwin":
+        return True
+    ok = True
+    try:
+        try:
+            from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+            trusted = AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True})
+        except ImportError:
+            from ApplicationServices import AXIsProcessTrusted
+            trusted = AXIsProcessTrusted()
+        if not trusted:
+            print("\n[!] macOS Accessibility permission is OFF for this terminal app.")
+            ok = False
+    except Exception as e:
+        print(f"\n[!] Could not check Accessibility permission ({e}).")
+    try:
+        import Quartz
+        if not Quartz.CGPreflightListenEventAccess():
+            Quartz.CGRequestListenEventAccess()  # pops the Input Monitoring prompt
+            if not Quartz.CGPreflightListenEventAccess():
+                print("[!] macOS Input Monitoring permission is OFF for this terminal app. "
+                      "The Esc key cannot work without it.")
+                ok = False
+    except Exception as e:
+        print(f"[!] Could not check Input Monitoring permission ({e}).")
+    if not ok:
+        print(
+            "\nFix it like this, then run the script again:\n"
+            "  1. System Settings > Privacy & Security > Accessibility: turn ON Terminal.\n"
+            "  2. System Settings > Privacy & Security > Input Monitoring: turn ON Terminal.\n"
+            "  3. QUIT Terminal completely (Cmd+Q), open it again, cd back into this folder.\n"
+        )
+    return ok
+
+
+def _stdin_stop_watcher():
+    """Second stop path that needs no permissions: click the terminal window and
+    press Enter. Started only after calibration so it does not eat those Enters."""
+    try:
+        for _ in sys.stdin:
+            print("\nEnter pressed in the terminal - stopping.")
+            stop_event.set()
+            return
+    except Exception:
+        pass
+
+
+def _start_esc_listener():
+    """Start the global Esc hook and confirm it is actually alive."""
+    listener = _start_esc_listener()
+    threading.Thread(target=_stdin_stop_watcher, daemon=True).start()
+    time.sleep(0.3)
+    if not listener.is_alive():
+        print("[!] The Esc listener did not start. Use Enter in the terminal or the "
+              "top-left-corner failsafe to stop.")
+    return listener
 
 def on_press(key):
     if key == keyboard.Key.esc:
@@ -36,8 +99,11 @@ def main():
     print("=" * 55)
     print("Two-Button Coordinate Clicker")
     print("=" * 55)
-    print("\nPress Esc to stop.")
+    print("\nStop with Esc, or click this terminal and press Enter.")
     print("Move the mouse to the TOP-LEFT corner for the PyAutoGUI failsafe.")
+
+    if not _mac_permissions_ok():
+        return
 
     input("\nOpen the page and position the browser. Press Enter to begin calibration...")
 
