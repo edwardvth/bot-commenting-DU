@@ -66,8 +66,8 @@ def _stdin_stop_watcher():
 
 def _start_esc_listener():
     """Start the global Esc hook and confirm it is actually alive."""
-    listener = _start_esc_listener()
-    threading.Thread(target=_stdin_stop_watcher, daemon=True).start()
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
     time.sleep(0.3)
     if not listener.is_alive():
         print("[!] The Esc listener did not start. Use Enter in the terminal or the "
@@ -113,8 +113,8 @@ def main():
     print(f"\nButton 1: {button1}")
     print(f"Button 2: {button2}")
 
-    listener = keyboard.Listener(on_press=on_press)
-    listener.start()
+    listener = _start_esc_listener()
+    threading.Thread(target=_stdin_stop_watcher, daemon=True).start()
 
     print(f"\nStarting in {START_DELAY} seconds...")
     for i in range(START_DELAY, 0, -1):
