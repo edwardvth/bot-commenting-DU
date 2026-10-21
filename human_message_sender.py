@@ -3,6 +3,7 @@ import random
 import threading
 
 import pyautogui
+import pyperclip
 from pynput import keyboard
 
 # ----------------------------
@@ -10,14 +11,16 @@ from pynput import keyboard
 # ----------------------------
 
 MESSAGES = [
-    "This is the best video ever!",
-    "I love this!",
-    "WOW",
-    "amazing!",
-    "This is awesome!",
-    "So good!",
-    "Love this so much!",
-    "Incredible!",
+    "🔥",
+    "😎",
+    "😍",
+    "🙌",
+    "💯",
+    "👏",
+    "🤩",
+    "❤️",
+    "🚀",
+    "✨",
 ]
 
 MIN_BETWEEN_SUBMISSIONS = 1.0
@@ -69,8 +72,12 @@ def human_type(text):
         if stop_event.is_set():
             return
 
-        # pyautogui.write works well for the simple ASCII messages used here.
-        pyautogui.write(char)
+        # pyautogui.write only handles ASCII, so paste anything else (emojis).
+        if char.isascii():
+            pyautogui.write(char)
+        else:
+            pyperclip.copy(char)
+            pyautogui.hotkey("ctrl", "v")
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
 
         if random.random() < HESITATION_CHANCE:
